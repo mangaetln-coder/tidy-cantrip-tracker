@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.5
+
+- Ajout d'un bouton de suppression pour chaque sort mineur dans la fenêtre détaillée.
+- Ajout d'une sélection multiple et d'une action **Supprimer la sélection**.
+- Les suppressions sont uniquement marquées dans la fenêtre : aucune donnée du personnage n'est modifiée avant **Enregistrer**.
+- Une ligne marquée pour suppression est grisée, son nom est barré, son attribution est désactivée et une action permet d'annuler la suppression.
+- Les compteurs, dépassements, catégories **Autres** et **À attribuer** sont recalculés immédiatement dans la fenêtre en prévisualisation.
+- **Annuler** abandonne toutes les suppressions et modifications d'attribution préparées.
+- **Enregistrer** applique les changements d'attribution et les suppressions ; une confirmation finale est demandée lorsqu'au moins un sort doit être supprimé.
+- La suppression en masse utilise une seule opération Foundry pour les Items sélectionnés.
+- Les suppressions concernent uniquement les sorts intégrés à l'acteur et ne modifient jamais les compendiums.
+
+# Changelog
+
 ## 1.1.4
 
 - Correction de la réinjection des compteurs de sorts mineurs lorsque Tidy recrée ou remplace les encarts d'incantation.
