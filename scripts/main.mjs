@@ -110,6 +110,14 @@ function createClassCantripPill(actor, classInfo) {
   value.className = "value tct-cantrip-value";
   value.innerHTML = `<span class="count font-data-medium">${classInfo.count}</span><span class="separator font-default-medium color-text-gold">/</span><span class="max font-label-medium color-text-lighter">${maxText}</span>`;
 
+  if (over) {
+    const icon = document.createElement("span");
+    icon.className = "tct-warning-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "⚠";
+    button.append(icon);
+  }
+
   button.append(label, value);
   button.addEventListener("click", (event) => {
     event.preventDefault();
@@ -254,12 +262,34 @@ function getClassCantripMax(actor, classItem) {
   if (!identifier) return null;
 
   const scales = actor.system?.scale?.[identifier];
-  if (!scales || typeof scales !== "object") return null;
-
-  const preferred = scales["cantrips-known"] ?? scales.cantripsKnown;
+  const preferred = scales?.["cantrips-known"] ?? scales?.cantripsKnown ?? null;
   const preferredValue = scaleNumber(preferred);
-  if (preferredValue != null) return preferredValue;
 
+  // D&D5e 6.0.0/6.0.1 content could leave old transferred effects on existing
+  // characters which concatenate a numeric Scale Value as text (for example
+  // 2 + 1 becoming "21"). Rebuild only when the prepared value is string-based
+  // and we can independently determine both the class base value and additive
+  // cantrip Scale Value effects.
+  const rawPreferred = rawScaleValue(preferred);
+  const baseValue = getClassCantripBaseValue(classItem);
+  const additions = getCantripScaleAdditions(actor, identifier);
+  const rebuiltValue = baseValue != null ? baseValue + additions.total : null;
+  const looksConcatenated = typeof rawPreferred === "string"
+    && additions.count > 0
+    && rebuiltValue != null
+    && preferredValue !== rebuiltValue;
+
+  if (looksConcatenated) {
+    console.warn(
+      `${MODULE_ID} | Rebuilt corrupted cantrip Scale Value for ${classItem.name}: ${preferredValue} -> ${rebuiltValue}`
+    );
+    return rebuiltValue;
+  }
+
+  if (preferredValue != null) return preferredValue;
+  if (rebuiltValue != null) return rebuiltValue;
+
+  if (!scales || typeof scales !== "object") return null;
   for (const [key, value] of Object.entries(scales)) {
     const normalized = String(key).toLowerCase();
     if (!normalized.includes("cantrip")) continue;
@@ -269,6 +299,94 @@ function getClassCantripMax(actor, classItem) {
   }
 
   return null;
+}
+
+function rawScaleValue(value) {
+  if (value == null) return null;
+  if (typeof value === "string" || typeof value === "number") return value;
+  if (typeof value === "object" && "value" in value) return rawScaleValue(value.value);
+  return null;
+}
+
+function getClassCantripBaseValue(classItem) {
+  const level = Number(classItem.system?.levels ?? 0);
+  const advancements = classItem.system?.advancement;
+  if (!advancements || !Number.isFinite(level)) return null;
+
+  for (const advancement of advancements) {
+    const identifier = advancement?.identifier ?? advancement?.configuration?.identifier ?? null;
+    if (identifier !== "cantrips-known" && identifier !== "cantripsKnown") continue;
+
+    const type = String(advancement?.type ?? advancement?.constructor?.name ?? "");
+    if (type && !type.includes("ScaleValue")) continue;
+
+    if (typeof advancement?.valueForLevel === "function") {
+      const value = scaleNumber(advancement.valueForLevel(level));
+      if (value != null) return value;
+    }
+
+    const scale = advancement?.configuration?.scale;
+    if (!scale || typeof scale !== "object") continue;
+
+    const levels = Object.keys(scale)
+      .map((key) => Number(key))
+      .filter((key) => Number.isFinite(key) && key <= level)
+      .sort((a, b) => b - a);
+
+    for (const scaleLevel of levels) {
+      const value = scaleNumber(scale[String(scaleLevel)] ?? scale[scaleLevel]);
+      if (value != null) return value;
+    }
+  }
+
+  return null;
+}
+
+function getCantripScaleAdditions(actor, classIdentifier) {
+  const currentKey = `system.scale.${classIdentifier}.cantrips-known.value`;
+  const legacyKey = `system.scale.${classIdentifier}.cantrips-known`;
+  const effects = [];
+  const seen = new Set();
+
+  const addEffect = (effect) => {
+    if (!effect || effect.disabled) return;
+    const key = effect.uuid ?? `${effect.parent?.uuid ?? ""}.${effect.id ?? effects.length}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    effects.push(effect);
+  };
+
+  for (const effect of actor.effects ?? []) addEffect(effect);
+  for (const item of actor.items ?? []) {
+    for (const effect of item.effects ?? []) {
+      if (effect.transfer === false) continue;
+      addEffect(effect);
+    }
+  }
+
+  let total = 0;
+  let count = 0;
+
+  for (const effect of effects) {
+    const changes = effect.system?.changes ?? effect.changes ?? [];
+    for (const change of changes) {
+      if (![currentKey, legacyKey].includes(change?.key)) continue;
+
+      const type = String(change?.type ?? "").toLowerCase();
+      const mode = Number(change?.mode ?? NaN);
+      const isAdd = type === "add"
+        || mode === Number(globalThis.CONST?.ACTIVE_EFFECT_MODES?.ADD ?? 2);
+      if (!isAdd) continue;
+
+      const value = Number(change?.value);
+      if (!Number.isFinite(value)) continue;
+
+      total += value;
+      count += 1;
+    }
+  }
+
+  return { total, count };
 }
 
 function scaleNumber(value) {
@@ -405,6 +523,10 @@ function resolveAssignment(spell, classes, provenance) {
     }
   }
 
+  return resolveAutomaticAssignment(classes, provenance);
+}
+
+function resolveAutomaticAssignment(classes, provenance) {
   if (provenance.kind === "item" && provenance.sourceItem) {
     const sourceItem = provenance.sourceItem;
     const advancementType = String(
@@ -612,8 +734,11 @@ async function openDetails(actor) {
 
 function renderDialogRow(row, classes, classMap, canEdit) {
   const manual = row.spell.getFlag?.(MODULE_ID, ASSIGNMENT_FLAG) ?? AUTO;
+  const automatic = resolveAutomaticAssignment(classes, row.provenance);
+  const automaticDestination = assignmentLabel(automatic, classes);
+  const automaticLabel = format("TCT.Assignment.AutomaticResolved", { assignment: automaticDestination });
   const options = [
-    option(AUTO, i18n("TCT.Assignment.Auto"), manual),
+    option(AUTO, automaticLabel, manual),
     ...classes.map((entry) => option(`class:${entry.id}`, entry.name, manual)),
     option(OTHER, i18n("TCT.Assignment.Other"), manual),
     option(UNASSIGNED, i18n("TCT.Assignment.Unassigned"), manual)
