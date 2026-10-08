@@ -21,6 +21,10 @@
   box-shadow: inset 3px 0 var(--color-level-error, currentColor);
 }
 
+.tidy5e-sheet .tct-cantrip-pill.is-over .tct-warning-icon {
+  color: var(--color-level-error, currentColor);
+}
+
 .tidy5e-sheet .tct-warning-icon {
   margin-right: 0.15rem;
 }
