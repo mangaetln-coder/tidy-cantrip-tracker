@@ -1,0 +1,148 @@
+.tidy5e-sheet .tct-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0.25rem 0 0;
+  padding: 0.2rem 0;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.tidy5e-sheet .tct-summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+  border-radius: 0.35rem;
+}
+
+.tidy5e-sheet .tct-summary__label {
+  font-weight: 700;
+  opacity: 0.88;
+  margin-right: 0.1rem;
+  flex: 0 0 auto;
+}
+
+.tidy5e-sheet .tct-chip,
+.tct-dialog__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
+  border-radius: 999px;
+  padding: 0.16rem 0.45rem;
+  background: color-mix(in srgb, currentColor 6%, transparent);
+  line-height: 1.2;
+  max-width: 100%;
+}
+
+.tidy5e-sheet .tct-chip {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.tidy5e-sheet .tct-chip:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.tidy5e-sheet .tct-chip--warn,
+.tct-dialog__pill.is-warning {
+  border-style: dashed;
+  font-weight: 700;
+  box-shadow: inset 3px 0 var(--color-level-warning, currentColor);
+}
+
+.tidy5e-sheet .tct-chip--over,
+.tct-dialog__pill.is-over {
+  border-width: 2px;
+  font-weight: 800;
+  box-shadow: inset 3px 0 var(--color-level-error, currentColor);
+}
+
+.tct-dialog {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+}
+
+.tct-dialog__help {
+  margin: 0;
+  opacity: 0.82;
+  font-size: 0.9em;
+}
+
+.tct-dialog__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.tct-dialog__pill {
+  white-space: nowrap;
+}
+
+.tct-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.tct-table {
+  width: 100%;
+  min-width: 44rem;
+  border-collapse: collapse;
+}
+
+.tct-table th,
+.tct-table td {
+  padding: 0.35rem 0.4rem;
+  vertical-align: middle;
+  text-align: left;
+}
+
+.tct-table th {
+  white-space: nowrap;
+}
+
+.tct-table td.tct-table__spell {
+  min-width: 9rem;
+}
+
+.tct-table td.tct-table__assignment {
+  min-width: 10rem;
+}
+
+.tct-table td.tct-table__source {
+  min-width: 12rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.tct-table td.tct-table__status {
+  min-width: 10rem;
+}
+
+.tct-table select {
+  width: 100%;
+  min-width: 9rem;
+  max-width: 100%;
+}
+
+.tct-status {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: center;
+  white-space: normal;
+}
+
+.tct-status.is-warning {
+  font-weight: 700;
+}
+
+.tct-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  font-weight: 700;
+}
