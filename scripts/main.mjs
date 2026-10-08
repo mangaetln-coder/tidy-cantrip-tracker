@@ -32,8 +32,15 @@ function renderTracker(element, actor) {
   const report = buildReport(actor);
   if (!report.shouldDisplay) return;
 
-  const nameContainer = element.querySelector('[data-tidy-sheet-part="name-container"]');
-  if (!nameContainer) return;
+  // Modern/Quadrone Tidy sheets expose "actor-name". Keep fallbacks for
+  // alternate/older Tidy layouts so the tracker fails gracefully across layouts.
+  const anchor = element.querySelector('[data-tidy-sheet-part="actor-name"]')
+    ?? element.querySelector('[data-tidy-sheet-part="name-container"]')
+    ?? element.querySelector('[data-tidy-sheet-part="name-header-row"]');
+  if (!anchor) {
+    console.warn(`${MODULE_ID} | Could not find a Tidy header anchor for ${actor.name}`);
+    return;
+  }
 
   const summary = document.createElement("div");
   summary.className = "tct-summary";
@@ -90,7 +97,7 @@ function renderTracker(element, actor) {
     }
   });
 
-  nameContainer.insertAdjacentElement("afterend", summary);
+  anchor.insertAdjacentElement("afterend", summary);
 }
 
 function makeChip(text, { warn = false, over = false, title = "" } = {}) {

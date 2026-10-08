@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1
+
+- Correction de l'affichage du compteur sur les fiches Tidy 5e modernes / Quadrone.
+- Utilisation prioritaire du point d'insertion `data-tidy-sheet-part="actor-name"`.
+- Conservation des points d'insertion de secours `name-container` et `name-header-row` pour les autres variantes de mise en page.
+- Ajout d'un message de diagnostic dans la console si aucun point d'insertion Tidy compatible n'est trouvé.
+- Aucun changement fonctionnel dans le calcul des quotas, le multiclassage, la provenance ou les traductions.
+
 ## 1.1.0
 
 - Nouvelle interface compacte : **Sorts mineurs**, **Autres**, **À attribuer**.
