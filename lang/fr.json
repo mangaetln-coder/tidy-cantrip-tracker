@@ -36,5 +36,6 @@
   "TCT.Accessibility.ToAssign": "{count} sorts mineurs nécessitent une attribution.",
   "TCT.Accessibility.AssignmentFor": "Attribution de {spell}",
   "TCT.Summary.UnassignedCantrips": "Sorts mineurs non attribués",
-  "TCT.Provenance.List": "Liste : {list}"
+  "TCT.Provenance.List": "Liste : {list}",
+  "TCT.Assignment.AutomaticResolved": "{assignment} (Automatique)"
 }
