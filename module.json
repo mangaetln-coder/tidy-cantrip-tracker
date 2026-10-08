@@ -3,7 +3,7 @@
   "title": "Tidy Cantrip Tracker",
   "description": "Displays and tracks cantrip limits per class on Tidy 5e character sheets, with multiclassing and support for cantrips granted by feats, backgrounds, species, subclasses, and other Advancements.",
   "type": "module",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "authors": [
     {
       "name": "mangaetln-coder",
@@ -57,7 +57,7 @@
   "media": [],
   "url": "https://github.com/mangaetln-coder/tidy-cantrip-tracker",
   "manifest": "https://github.com/mangaetln-coder/tidy-cantrip-tracker/releases/latest/download/module.json",
-  "download": "https://github.com/mangaetln-coder/tidy-cantrip-tracker/releases/download/v1.1.2/tidy-cantrip-tracker-v1.1.2.zip",
+  "download": "https://github.com/mangaetln-coder/tidy-cantrip-tracker/releases/download/v1.1.3/tidy-cantrip-tracker-v1.1.3.zip",
   "bugs": "https://github.com/mangaetln-coder/tidy-cantrip-tracker/issues",
   "changelog": "https://github.com/mangaetln-coder/tidy-cantrip-tracker/releases",
   "readme": "https://github.com/mangaetln-coder/tidy-cantrip-tracker/blob/main/README.md"
