@@ -3,6 +3,7 @@ const ASSIGNMENT_FLAG = "assignment";
 const AUTO = "auto";
 const OTHER = "bonus";      // Kept for backward compatibility with v0.1.0 flags.
 const UNASSIGNED = "unknown"; // Kept for backward compatibility with v0.1.0 flags.
+const SHEET_OBSERVERS = new WeakMap();
 
 Hooks.once("ready", () => {
   const systemVersion = game.system?.version ?? "0";
@@ -20,11 +21,89 @@ Hooks.on("renderActorSheetV2", (app, element) => {
     const actor = app.actor ?? app.document ?? app.object;
     if (!actor || actor.type !== "character") return;
 
-    renderTracker(element, actor);
+    ensureTrackerObserver(element, actor);
+    refreshTracker(element, actor);
   } catch (error) {
     console.error(`${MODULE_ID} | Unable to render cantrip tracker`, error);
   }
 });
+
+function ensureTrackerObserver(element, actor) {
+  const existing = SHEET_OBSERVERS.get(element);
+  if (existing) {
+    existing.actor = actor;
+    return;
+  }
+
+  const state = {
+    element,
+    actor,
+    observer: null,
+    scheduled: false
+  };
+
+  state.observer = new MutationObserver((mutations) => {
+    if (!mutations.some(isRelevantSpellcastingMutation)) return;
+    if (state.scheduled) return;
+
+    state.scheduled = true;
+    const schedule = globalThis.requestAnimationFrame
+      ?? ((callback) => globalThis.setTimeout(callback, 0));
+
+    schedule(() => {
+      state.scheduled = false;
+      if (!state.element.isConnected) return;
+      refreshTracker(state.element, state.actor);
+    });
+  });
+
+  SHEET_OBSERVERS.set(element, state);
+  observeTrackerState(state);
+}
+
+function observeTrackerState(state) {
+  state.observer.observe(state.element, {
+    subtree: true,
+    childList: true,
+    attributes: true,
+    attributeFilter: ["class"]
+  });
+}
+
+function refreshTracker(element, actor) {
+  const state = SHEET_OBSERVERS.get(element);
+  if (state) {
+    state.actor = actor;
+    state.observer.disconnect();
+  }
+
+  try {
+    renderTracker(element, actor);
+  } finally {
+    if (state && element.isConnected) observeTrackerState(state);
+  }
+}
+
+function isRelevantSpellcastingMutation(mutation) {
+  if (mutation.type === "attributes") {
+    const target = mutation.target;
+    return target instanceof Element
+      && (
+        target.matches(".spellcasting-cards")
+        || target.matches(".spellcasting-class-card:not(.tct-other-card)")
+      );
+  }
+
+  if (mutation.type !== "childList") return false;
+
+  const nodes = [...mutation.addedNodes, ...mutation.removedNodes];
+  return nodes.some((node) => {
+    if (!(node instanceof Element)) return false;
+
+    const selector = ".spellcasting-cards, .spellcasting-class-card:not(.tct-other-card), .tct-cantrip-pill, .tct-other-card";
+    return node.matches(selector) || Boolean(node.querySelector?.(selector));
+  });
+}
 
 function renderTracker(element, actor) {
   element.querySelectorAll(".tct-cantrip-pill, .tct-other-card").forEach((node) => node.remove());
