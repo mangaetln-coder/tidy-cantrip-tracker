@@ -36,5 +36,6 @@
   "TCT.Accessibility.ToAssign": "{count} cantrips require an assignment.",
   "TCT.Accessibility.AssignmentFor": "Assignment for {spell}",
   "TCT.Summary.UnassignedCantrips": "Unassigned cantrips",
-  "TCT.Provenance.List": "List: {list}"
+  "TCT.Provenance.List": "List: {list}",
+  "TCT.Assignment.AutomaticResolved": "{assignment} (Automatic)"
 }
