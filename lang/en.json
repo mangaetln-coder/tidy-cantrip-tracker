@@ -37,5 +37,19 @@
   "TCT.Accessibility.AssignmentFor": "Assignment for {spell}",
   "TCT.Summary.UnassignedCantrips": "Unassigned cantrips",
   "TCT.Provenance.List": "List: {list}",
-  "TCT.Assignment.AutomaticResolved": "{assignment} (Automatic)"
+  "TCT.Assignment.AutomaticResolved": "{assignment} (Automatic)",
+  "TCT.Dialog.Actions": "Actions",
+  "TCT.Status.PendingDelete": "Pending deletion",
+  "TCT.Delete.Mark": "Mark for deletion",
+  "TCT.Delete.Restore": "Undo deletion",
+  "TCT.Delete.MarkSpell": "Mark {spell} for deletion",
+  "TCT.Delete.RestoreSpell": "Undo deletion of {spell}",
+  "TCT.Delete.SelectSpell": "Select {spell}",
+  "TCT.Delete.SelectAll": "Select all cantrips",
+  "TCT.Delete.Selected": "Delete selected",
+  "TCT.Delete.SelectedCount": "{count} selected",
+  "TCT.Delete.ConfirmTitle": "Confirm deletions",
+  "TCT.Delete.ConfirmMessage": "Save changes and delete {count} cantrip(s) from {actor}?",
+  "TCT.Delete.ConfirmButton": "Delete {count} spell(s)",
+  "TCT.Notification.SavedChanges": "Changes saved: {updated} assignment(s) updated, {deleted} spell(s) deleted."
 }
