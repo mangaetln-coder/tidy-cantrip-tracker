@@ -3,7 +3,6 @@
   "TCT.Summary.ClassCount": "{class} {count}/{max}",
   "TCT.Summary.Other": "Other {count}",
   "TCT.Summary.ToAssign": "To assign {count}",
-
   "TCT.Dialog.Title": "Cantrips — {actor}",
   "TCT.Dialog.Help": "Class limits are read from D&D5e Scale Values. Cantrips granted by a Foundry Item through an Advancement are identified by that Item. Cantrips added directly are associated with the spell lists registered by D&D5e. With multiclassing, a cantrip compatible with several of the character's classes may require an assignment.",
   "TCT.Dialog.Spell": "Cantrip",
@@ -12,34 +11,30 @@
   "TCT.Dialog.Status": "Status",
   "TCT.Dialog.Total": "Total: {count}",
   "TCT.Dialog.NoCantrips": "No cantrips on this sheet.",
-
   "TCT.Assignment.Auto": "Automatic",
   "TCT.Assignment.Other": "Other",
   "TCT.Assignment.Unassigned": "To assign",
-
   "TCT.Status.Valid": "Valid",
   "TCT.Status.Granted": "Granted outside class quota",
   "TCT.Status.Other": "Outside class quota",
   "TCT.Status.OverLimit": "Over limit",
   "TCT.Status.NeedsAssignment": "Assignment required",
   "TCT.Status.NotOnClassList": "Not on the class spell list",
-
   "TCT.Provenance.Unknown": "Unknown source",
   "TCT.Provenance.NoRegisteredList": "No known spell list",
-  "TCT.Provenance.Lists": "{lists}",
-
+  "TCT.Provenance.Lists": "Lists: {lists}",
   "TCT.Action.Save": "Save",
   "TCT.Action.Cancel": "Cancel",
-
   "TCT.Notification.Saved": "Cantrip assignments saved.",
   "TCT.Notification.NoPermission": "You do not have permission to change these spell assignments.",
   "TCT.Notification.UnsupportedSystem": "Tidy Cantrip Tracker is designed for D&D5e 6.x.",
-
   "TCT.Accessibility.OpenTracker": "Open cantrip details and manage their assignments.",
   "TCT.Accessibility.ClassQuota": "{class}: {count} cantrips out of a maximum of {max}.",
   "TCT.Accessibility.ClassQuotaUnknown": "{class}: {count} cantrips, maximum could not be determined.",
   "TCT.Accessibility.OverQuota": "{class} quota exceeded: {count} cantrips for a maximum of {max}.",
   "TCT.Accessibility.Other": "{count} cantrips come from other sources.",
   "TCT.Accessibility.ToAssign": "{count} cantrips require an assignment.",
-  "TCT.Accessibility.AssignmentFor": "Assignment for {spell}"
-}
+  "TCT.Accessibility.AssignmentFor": "Assignment for {spell}",
+  "TCT.Summary.UnassignedCantrips": "Unassigned cantrips",
+  "TCT.Provenance.List": "List: {list}"
+}\n

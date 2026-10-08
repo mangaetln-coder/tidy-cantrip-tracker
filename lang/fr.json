@@ -3,7 +3,6 @@
   "TCT.Summary.ClassCount": "{class} {count}/{max}",
   "TCT.Summary.Other": "Autres {count}",
   "TCT.Summary.ToAssign": "À attribuer {count}",
-
   "TCT.Dialog.Title": "Sorts mineurs — {actor}",
   "TCT.Dialog.Help": "Les limites de classe sont lues depuis les Scale Values D&D5e. Les sorts mineurs accordés par un Item Foundry via un Advancement sont identifiés par cet Item. Les sorts ajoutés directement sont associés aux listes de sorts enregistrées par D&D5e. En multiclassage, un sort compatible avec plusieurs classes du personnage peut nécessiter une attribution.",
   "TCT.Dialog.Spell": "Sort mineur",
@@ -12,34 +11,30 @@
   "TCT.Dialog.Status": "État",
   "TCT.Dialog.Total": "Total : {count}",
   "TCT.Dialog.NoCantrips": "Aucun sort mineur sur la fiche.",
-
   "TCT.Assignment.Auto": "Automatique",
   "TCT.Assignment.Other": "Autres",
   "TCT.Assignment.Unassigned": "À attribuer",
-
   "TCT.Status.Valid": "Conforme",
   "TCT.Status.Granted": "Accordé hors quota de classe",
   "TCT.Status.Other": "Hors quota de classe",
   "TCT.Status.OverLimit": "Dépassement",
   "TCT.Status.NeedsAssignment": "Attribution requise",
   "TCT.Status.NotOnClassList": "Hors liste de la classe",
-
   "TCT.Provenance.Unknown": "Provenance indéterminée",
   "TCT.Provenance.NoRegisteredList": "Aucune liste de sorts connue",
-  "TCT.Provenance.Lists": "{lists}",
-
+  "TCT.Provenance.Lists": "Listes : {lists}",
   "TCT.Action.Save": "Enregistrer",
   "TCT.Action.Cancel": "Annuler",
-
   "TCT.Notification.Saved": "Attributions des sorts mineurs enregistrées.",
   "TCT.Notification.NoPermission": "Vous n'avez pas la permission de modifier les attributions de ces sorts.",
   "TCT.Notification.UnsupportedSystem": "Tidy Cantrip Tracker est prévu pour D&D5e 6.x.",
-
   "TCT.Accessibility.OpenTracker": "Ouvrir le détail des sorts mineurs et gérer leur attribution.",
   "TCT.Accessibility.ClassQuota": "{class} : {count} sorts mineurs sur un maximum de {max}.",
   "TCT.Accessibility.ClassQuotaUnknown": "{class} : {count} sorts mineurs, maximum non déterminé.",
   "TCT.Accessibility.OverQuota": "Quota de {class} dépassé : {count} sorts mineurs pour un maximum de {max}.",
   "TCT.Accessibility.Other": "{count} sorts mineurs provenant d'autres sources.",
   "TCT.Accessibility.ToAssign": "{count} sorts mineurs nécessitent une attribution.",
-  "TCT.Accessibility.AssignmentFor": "Attribution de {spell}"
-}
+  "TCT.Accessibility.AssignmentFor": "Attribution de {spell}",
+  "TCT.Summary.UnassignedCantrips": "Sorts mineurs non attribués",
+  "TCT.Provenance.List": "Liste : {list}"
+}\n

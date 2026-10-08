@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.2
+
+- Déplacement des compteurs de sorts mineurs dans les encarts d'incantation Tidy.
+- Le compteur d'une classe est inséré juste avant **Préparé** : par exemple `DD 14 | Sorts mineurs 2/2 | Préparé 1/4`.
+- En multiclassage, chaque classe conserve son propre compteur et son propre quota.
+- Ajout d'un encart **Autres** au-dessus des classes lorsqu'il existe des sorts mineurs hors quota ou non attribués.
+- L'encart **Autres** distingue **Sorts mineurs** et **Sorts mineurs non attribués**.
+- Les compteurs intégrés restent cliquables et ouvrent la fenêtre détaillée d'attribution.
+- Normalisation des provenances de listes : `Liste : Druide` ou `Listes : Druide, Ensorceleur et Magicien`.
+- Utilisation du nom de classe fourni par le registre D&D5e (`SpellList.name`) afin d'éviter le mélange entre noms de classes et libellés complets « Liste des sorts de … ».
+- Aucun changement dans le calcul des quotas, le multiclassage, la détection des Advancements ou les flags d'attribution existants.
+
+# Changelog
+
 ## 1.1.1
 
 - Correction de l'affichage du compteur sur les fiches Tidy 5e modernes / Quadrone.

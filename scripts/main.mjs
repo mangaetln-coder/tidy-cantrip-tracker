@@ -27,90 +27,169 @@ Hooks.on("renderActorSheetV2", (app, element) => {
 });
 
 function renderTracker(element, actor) {
-  element.querySelectorAll(`.tct-summary[data-actor-id="${cssEscape(actor.id)}"]`).forEach((node) => node.remove());
+  element.querySelectorAll(".tct-cantrip-pill, .tct-other-card").forEach((node) => node.remove());
 
   const report = buildReport(actor);
   if (!report.shouldDisplay) return;
 
-  // Modern/Quadrone Tidy sheets expose "actor-name". Keep fallbacks for
-  // alternate/older Tidy layouts so the tracker fails gracefully across layouts.
-  const anchor = element.querySelector('[data-tidy-sheet-part="actor-name"]')
-    ?? element.querySelector('[data-tidy-sheet-part="name-container"]')
-    ?? element.querySelector('[data-tidy-sheet-part="name-header-row"]');
-  if (!anchor) {
-    console.warn(`${MODULE_ID} | Could not find a Tidy header anchor for ${actor.name}`);
+  const cardsContainer = element.querySelector(".sheet-footer.spellbook-footer .spellcasting-cards")
+    ?? element.querySelector(".spellcasting-cards");
+  if (!cardsContainer) {
+    console.warn(`${MODULE_ID} | Could not find the Tidy spellcasting footer for ${actor.name}`);
     return;
   }
 
-  const summary = document.createElement("div");
-  summary.className = "tct-summary";
-  summary.dataset.actorId = actor.id;
-  summary.dataset.tidyRenderScheme = "handlebars";
-  summary.tabIndex = 0;
-  summary.setAttribute("role", "button");
-  summary.setAttribute("aria-label", i18n("TCT.Accessibility.OpenTracker"));
-  summary.title = i18n("TCT.Accessibility.OpenTracker");
-
-  const label = document.createElement("span");
-  label.className = "tct-summary__label";
-  label.textContent = `${i18n("TCT.Summary.Header")} :`;
-  summary.append(label);
+  let inserted = false;
 
   for (const classInfo of report.classes) {
     if (classInfo.max == null && classInfo.count === 0) continue;
 
-    const maxText = classInfo.max ?? "?";
-    const over = classInfo.max != null && classInfo.count > classInfo.max;
-    const text = format("TCT.Summary.ClassCount", {
-      class: classInfo.name,
-      count: classInfo.count,
-      max: maxText
-    });
-    const ariaLabel = classInfo.max == null
-      ? format("TCT.Accessibility.ClassQuotaUnknown", { class: classInfo.name, count: classInfo.count })
-      : over
-        ? format("TCT.Accessibility.OverQuota", { class: classInfo.name, count: classInfo.count, max: classInfo.max })
-        : format("TCT.Accessibility.ClassQuota", { class: classInfo.name, count: classInfo.count, max: classInfo.max });
+    const classCard = findClassCard(cardsContainer, classInfo.item);
+    if (!classCard) continue;
 
-    summary.append(makeChip(over ? `⚠ ${text}` : text, { over, title: ariaLabel }));
+    const info = classCard.querySelector(".info.pills");
+    if (!info) continue;
+
+    const preparedControl = Array.from(classCard.querySelectorAll("[data-emphasize-uuid]"))
+      .find((node) => node.dataset?.emphasizeUuid === classInfo.item.uuid)
+      ?? classCard.querySelector(".prepared");
+
+    const pill = createClassCantripPill(actor, classInfo);
+    if (preparedControl?.parentElement === info) info.insertBefore(pill, preparedControl);
+    else info.append(pill);
+
+    inserted = true;
   }
 
+  if (report.other.length || report.unassigned.length) {
+    const referenceCard = cardsContainer.querySelector(".spellcasting-class-card");
+    const otherCard = createOtherCard(actor, report, referenceCard);
+    if (referenceCard) cardsContainer.insertBefore(otherCard, referenceCard);
+    else cardsContainer.append(otherCard);
+    inserted = true;
+  }
+
+  if (!inserted) {
+    console.warn(`${MODULE_ID} | No compatible Tidy spellcasting class card was found for ${actor.name}`);
+  }
+}
+
+function findClassCard(cardsContainer, classItem) {
+  for (const node of cardsContainer.querySelectorAll(".spellcasting-class-card")) {
+    const matchesUuid = Array.from(node.querySelectorAll("[data-emphasize-uuid]"))
+      .some((control) => control.dataset?.emphasizeUuid === classItem.uuid);
+    if (matchesUuid) return node;
+  }
+
+  return Array.from(cardsContainer.querySelectorAll(".spellcasting-class-card"))
+    .find((node) => node.querySelector(".header .name")?.textContent?.trim() === classItem.name)
+    ?? null;
+}
+
+function createClassCantripPill(actor, classInfo) {
+  const maxText = classInfo.max ?? "?";
+  const over = classInfo.max != null && classInfo.count > classInfo.max;
+  const ariaLabel = classInfo.max == null
+    ? format("TCT.Accessibility.ClassQuotaUnknown", { class: classInfo.name, count: classInfo.count })
+    : over
+      ? format("TCT.Accessibility.OverQuota", { class: classInfo.name, count: classInfo.count, max: classInfo.max })
+      : format("TCT.Accessibility.ClassQuota", { class: classInfo.name, count: classInfo.count, max: classInfo.max });
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "tct-cantrip-pill pill pill-medium interactive hide-collapsed";
+  if (over) button.classList.add("is-over");
+  button.title = ariaLabel;
+  button.setAttribute("aria-label", ariaLabel);
+
+  const label = document.createElement("span");
+  label.className = "label font-label-medium color-text-lighter";
+  label.textContent = i18n("TCT.Summary.Header");
+
+  const value = document.createElement("span");
+  value.className = "value tct-cantrip-value";
+  value.innerHTML = `<span class="count font-data-medium">${classInfo.count}</span><span class="separator font-default-medium color-text-gold">/</span><span class="max font-label-medium color-text-lighter">${maxText}</span>`;
+
+  button.append(label, value);
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openDetails(actor);
+  });
+
+  return button;
+}
+
+function createOtherCard(actor, report, referenceCard) {
+  const card = document.createElement("div");
+  card.className = "spellcasting-class-card flexrow tct-other-card";
+  if (referenceCard?.classList.contains("compact")) card.classList.add("compact");
+  if (referenceCard?.classList.contains("multiclass") || report.classes.length > 1) card.classList.add("multiclass");
+
+  const header = document.createElement("div");
+  header.className = "header flexshrink";
+
+  const name = document.createElement("span");
+  name.className = "name font-title-small";
+  name.textContent = i18n("TCT.Assignment.Other");
+  header.append(name);
+
+  const info = document.createElement("div");
+  info.className = "info pills flex1";
+
   if (report.other.length) {
-    summary.append(makeChip(
-      format("TCT.Summary.Other", { count: report.other.length }),
-      { title: format("TCT.Accessibility.Other", { count: report.other.length }) }
-    ));
+    info.append(createOtherCountPill(actor, {
+      label: i18n("TCT.Summary.Header"),
+      count: report.other.length,
+      ariaLabel: format("TCT.Accessibility.Other", { count: report.other.length })
+    }));
   }
 
   if (report.unassigned.length) {
-    summary.append(makeChip(
-      `⚠ ${format("TCT.Summary.ToAssign", { count: report.unassigned.length })}`,
-      { warn: true, title: format("TCT.Accessibility.ToAssign", { count: report.unassigned.length }) }
-    ));
+    info.append(createOtherCountPill(actor, {
+      label: i18n("TCT.Summary.UnassignedCantrips"),
+      count: report.unassigned.length,
+      ariaLabel: format("TCT.Accessibility.ToAssign", { count: report.unassigned.length }),
+      warning: true
+    }));
   }
 
-  summary.addEventListener("click", () => openDetails(actor));
-  summary.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      openDetails(actor);
-    }
-  });
-
-  anchor.insertAdjacentElement("afterend", summary);
+  card.append(header, info);
+  return card;
 }
 
-function makeChip(text, { warn = false, over = false, title = "" } = {}) {
-  const chip = document.createElement("span");
-  chip.className = "tct-chip";
-  if (warn) chip.classList.add("tct-chip--warn");
-  if (over) chip.classList.add("tct-chip--over");
-  chip.textContent = text;
-  if (title) {
-    chip.title = title;
-    chip.setAttribute("aria-label", title);
+function createOtherCountPill(actor, { label, count, ariaLabel, warning = false }) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "tct-cantrip-pill pill pill-medium interactive";
+  if (warning) button.classList.add("is-warning");
+  button.title = ariaLabel;
+  button.setAttribute("aria-label", ariaLabel);
+
+  const labelNode = document.createElement("span");
+  labelNode.className = "label font-label-medium color-text-lighter";
+  labelNode.textContent = label;
+
+  const value = document.createElement("span");
+  value.className = "value";
+  value.textContent = String(count);
+
+  if (warning) {
+    const icon = document.createElement("span");
+    icon.className = "tct-warning-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.textContent = "⚠";
+    button.append(icon);
   }
-  return chip;
+
+  button.append(labelNode, value);
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openDetails(actor);
+  });
+
+  return button;
 }
 
 function buildReport(actor) {
@@ -279,7 +358,9 @@ function resolveProvenance(actor, spell, advancementProvenance) {
       advancement: null,
       originalUuid: getOriginalSpellUuid(spell),
       classLists,
-      label: format("TCT.Provenance.Lists", { lists: formatList(listNames) })
+      label: classLists.length === 1
+        ? format("TCT.Provenance.List", { list: listNames[0] })
+        : format("TCT.Provenance.Lists", { lists: formatList(listNames) })
     };
   }
 
@@ -399,7 +480,7 @@ function getSpellClassLists(actor, spell) {
       .filter((list) => list?.metadata?.type === "class")
       .map((list) => {
         const identifier = list.metadata?.identifier ?? null;
-        const registeredName = localizeMaybe(list.metadata?.name ?? identifier ?? "");
+        const registeredName = localizeMaybe(list.name ?? list.metadata?.name ?? identifier ?? "");
         return {
           identifier,
           displayName: actorClassNames.get(identifier) ?? registeredName,

@@ -1,63 +1,32 @@
-.tidy5e-sheet .tct-summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem;
-  margin: 0.25rem 0 0;
-  padding: 0.2rem 0;
-  font-size: 0.78rem;
-  line-height: 1.2;
-  min-width: 0;
-}
-
-.tidy5e-sheet .tct-summary:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
-  border-radius: 0.35rem;
-}
-
-.tidy5e-sheet .tct-summary__label {
-  font-weight: 700;
-  opacity: 0.88;
-  margin-right: 0.1rem;
-  flex: 0 0 auto;
-}
-
-.tidy5e-sheet .tct-chip,
-.tct-dialog__pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.2rem;
-  border: 1px solid color-mix(in srgb, currentColor 28%, transparent);
-  border-radius: 999px;
-  padding: 0.16rem 0.45rem;
-  background: color-mix(in srgb, currentColor 6%, transparent);
-  line-height: 1.2;
-  max-width: 100%;
-}
-
-.tidy5e-sheet .tct-chip {
+.tidy5e-sheet .tct-cantrip-pill {
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
 }
 
-.tidy5e-sheet .tct-chip:hover {
-  background: color-mix(in srgb, currentColor 12%, transparent);
+.tidy5e-sheet .tct-cantrip-pill .tct-cantrip-value {
+  display: inline-flex;
+  align-items: center;
 }
 
-.tidy5e-sheet .tct-chip--warn,
-.tct-dialog__pill.is-warning {
+.tidy5e-sheet .tct-cantrip-pill.is-warning {
   border-style: dashed;
   font-weight: 700;
   box-shadow: inset 3px 0 var(--color-level-warning, currentColor);
 }
 
-.tidy5e-sheet .tct-chip--over,
-.tct-dialog__pill.is-over {
+.tidy5e-sheet .tct-cantrip-pill.is-over {
   border-width: 2px;
   font-weight: 800;
   box-shadow: inset 3px 0 var(--color-level-error, currentColor);
+}
+
+.tidy5e-sheet .tct-warning-icon {
+  margin-right: 0.15rem;
+}
+
+.tidy5e-sheet .tct-other-card .header .name {
+  cursor: default;
 }
 
 .tct-dialog {
