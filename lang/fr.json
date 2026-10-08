@@ -37,5 +37,19 @@
   "TCT.Accessibility.AssignmentFor": "Attribution de {spell}",
   "TCT.Summary.UnassignedCantrips": "Sorts mineurs non attribués",
   "TCT.Provenance.List": "Liste : {list}",
-  "TCT.Assignment.AutomaticResolved": "{assignment} (Automatique)"
+  "TCT.Assignment.AutomaticResolved": "{assignment} (Automatique)",
+  "TCT.Dialog.Actions": "Actions",
+  "TCT.Status.PendingDelete": "À supprimer",
+  "TCT.Delete.Mark": "Marquer pour suppression",
+  "TCT.Delete.Restore": "Annuler la suppression",
+  "TCT.Delete.MarkSpell": "Marquer {spell} pour suppression",
+  "TCT.Delete.RestoreSpell": "Annuler la suppression de {spell}",
+  "TCT.Delete.SelectSpell": "Sélectionner {spell}",
+  "TCT.Delete.SelectAll": "Sélectionner tous les sorts mineurs",
+  "TCT.Delete.Selected": "Supprimer la sélection",
+  "TCT.Delete.SelectedCount": "{count} sélectionné(s)",
+  "TCT.Delete.ConfirmTitle": "Confirmer les suppressions",
+  "TCT.Delete.ConfirmMessage": "Enregistrer les modifications et supprimer {count} sort(s) mineur(s) de {actor} ?",
+  "TCT.Delete.ConfirmButton": "Supprimer {count} sort(s)",
+  "TCT.Notification.SavedChanges": "Modifications enregistrées : {updated} attribution(s) modifiée(s), {deleted} sort(s) supprimé(s)."
 }
