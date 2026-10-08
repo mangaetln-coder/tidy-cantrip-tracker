@@ -577,7 +577,10 @@ function resolveAssignment(spell, classes, provenance) {
   const manual = spell.getFlag?.(MODULE_ID, ASSIGNMENT_FLAG)
     ?? spell.flags?.[MODULE_ID]?.[ASSIGNMENT_FLAG]
     ?? AUTO;
+  return resolveAssignmentValue(manual, classes, provenance);
+}
 
+function resolveAssignmentValue(manual, classes, provenance) {
   if (manual && manual !== AUTO) {
     if (manual === OTHER) {
       return { kind: "other", reason: "manual-other", manual, onClassList: null };
@@ -706,53 +709,17 @@ function getOriginalSpellUuid(spell) {
 async function openDetails(actor) {
   const report = buildReport(actor);
   const canEdit = Boolean(actor.isOwner);
-  const classMap = new Map(report.classes.map((entry) => [entry.id, entry]));
+  const draft = {
+    deleted: new Set(),
+    assignments: new Map(
+      report.rows.map((row) => [
+        row.spell.id,
+        row.spell.getFlag?.(MODULE_ID, ASSIGNMENT_FLAG) ?? AUTO
+      ])
+    )
+  };
 
-  const classPills = report.classes
-    .filter((entry) => entry.max != null || entry.count > 0)
-    .map((entry) => {
-      const maxText = entry.max ?? "?";
-      const text = format("TCT.Summary.ClassCount", {
-        class: entry.name,
-        count: entry.count,
-        max: maxText
-      });
-      const cls = entry.over ? "is-over" : "";
-      return `<span class="tct-dialog__pill ${cls}">${escapeHtml(entry.over ? `⚠ ${text}` : text)}</span>`;
-    })
-    .join("");
-
-  const otherPill = report.other.length
-    ? `<span class="tct-dialog__pill">${escapeHtml(format("TCT.Summary.Other", { count: report.other.length }))}</span>`
-    : "";
-  const unassignedPill = report.unassigned.length
-    ? `<span class="tct-dialog__pill is-warning">${escapeHtml(`⚠ ${format("TCT.Summary.ToAssign", { count: report.unassigned.length })}`)}</span>`
-    : "";
-
-  const rows = report.rows.length
-    ? report.rows.map((row) => renderDialogRow(row, report.classes, classMap, canEdit)).join("")
-    : `<tr><td colspan="4">${escapeHtml(i18n("TCT.Dialog.NoCantrips"))}</td></tr>`;
-
-  const content = `
-    <div class="tct-dialog">
-      <p class="tct-dialog__help">${escapeHtml(i18n("TCT.Dialog.Help"))}</p>
-      <div class="tct-dialog__summary">${classPills}${otherPill}${unassignedPill}</div>
-      <div class="tct-table-wrap">
-        <table class="tct-table">
-          <thead>
-            <tr>
-              <th scope="col">${escapeHtml(i18n("TCT.Dialog.Spell"))}</th>
-              <th scope="col">${escapeHtml(i18n("TCT.Dialog.Assignment"))}</th>
-              <th scope="col">${escapeHtml(i18n("TCT.Dialog.Source"))}</th>
-              <th scope="col">${escapeHtml(i18n("TCT.Dialog.Status"))}</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>
-      <div class="tct-dialog__footer">${escapeHtml(format("TCT.Dialog.Total", { count: report.cantrips.length }))}</div>
-    </div>`;
-
+  const content = renderDraftDialog(report, draft, canEdit);
   const DialogV2 = foundry.applications.api.DialogV2;
   const buttons = [];
 
@@ -763,10 +730,12 @@ async function openDetails(actor) {
       icon: "fa-solid fa-floppy-disk",
       default: true,
       callback: (_event, button) => {
-        const data = {};
         const formData = new FormData(button.form);
-        for (const [key, value] of formData.entries()) data[key] = value;
-        return data;
+        const assignments = {};
+        for (const [key, value] of formData.entries()) {
+          if (key.startsWith("assignment-")) assignments[key.slice(11)] = String(value);
+        }
+        return { assignments, deletedIds: Array.from(draft.deleted) };
       }
     });
   }
@@ -782,7 +751,10 @@ async function openDetails(actor) {
     content,
     buttons,
     rejectClose: false,
-    modal: false
+    modal: false,
+    render: (_event, dialog) => {
+      if (canEdit) initializeDraftDialog(dialog.element, report, draft);
+    }
   });
 
   if (!result || result === "cancel" || typeof result !== "object") return;
@@ -791,28 +763,122 @@ async function openDetails(actor) {
     return;
   }
 
+  const deletedIds = Array.from(new Set(result.deletedIds ?? []))
+    .filter((id) => actor.items?.has?.(id));
+
+  if (deletedIds.length) {
+    const confirmed = await DialogV2.confirm({
+      window: { title: i18n("TCT.Delete.ConfirmTitle") },
+      content: `<p>${escapeHtml(format("TCT.Delete.ConfirmMessage", {
+        count: deletedIds.length,
+        actor: actor.name
+      }))}</p>`,
+      yes: {
+        label: format("TCT.Delete.ConfirmButton", { count: deletedIds.length }),
+        icon: "fa-solid fa-trash"
+      },
+      no: {
+        label: i18n("TCT.Action.Cancel"),
+        icon: "fa-solid fa-xmark"
+      },
+      rejectClose: false,
+      modal: true
+    });
+    if (!confirmed) return;
+  }
+
   const updates = [];
   for (const row of report.rows) {
-    const key = `assignment-${row.spell.id}`;
-    if (!(key in result)) continue;
-    const assignment = String(result[key] ?? AUTO);
+    if (deletedIds.includes(row.spell.id)) continue;
+    const assignment = String(result.assignments?.[row.spell.id] ?? draft.assignments.get(row.spell.id) ?? AUTO);
     const current = row.spell.getFlag?.(MODULE_ID, ASSIGNMENT_FLAG) ?? AUTO;
     if (assignment === current) continue;
-
     updates.push({
       _id: row.spell.id,
       [`flags.${MODULE_ID}.${ASSIGNMENT_FLAG}`]: assignment
     });
   }
 
-  if (!updates.length) return;
-  await actor.updateEmbeddedDocuments("Item", updates);
-  ui.notifications.info(i18n("TCT.Notification.Saved"));
+  if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+  if (deletedIds.length) await actor.deleteEmbeddedDocuments("Item", deletedIds);
+  if (!updates.length && !deletedIds.length) return;
+
+  ui.notifications.info(format("TCT.Notification.SavedChanges", {
+    updated: updates.length,
+    deleted: deletedIds.length
+  }));
   actor.sheet?.render?.({ force: true });
 }
 
-function renderDialogRow(row, classes, classMap, canEdit) {
-  const manual = row.spell.getFlag?.(MODULE_ID, ASSIGNMENT_FLAG) ?? AUTO;
+function renderDraftDialog(report, draft, canEdit) {
+  const preview = buildDraftPreview(report, draft);
+  const classPills = preview.classes
+    .filter((entry) => entry.max != null || entry.count > 0)
+    .map((entry) => draftClassPill(entry))
+    .join("");
+
+  const otherPill = `<span class="tct-dialog__pill" data-tct-preview="other" ${preview.other ? "" : "hidden"}>${escapeHtml(format("TCT.Summary.Other", { count: preview.other }))}</span>`;
+  const unassignedPill = `<span class="tct-dialog__pill is-warning" data-tct-preview="unassigned" ${preview.unassigned ? "" : "hidden"}>${escapeHtml(`⚠ ${format("TCT.Summary.ToAssign", { count: preview.unassigned })}`)}</span>`;
+
+  const selectionHeader = canEdit
+    ? `<th scope="col" class="tct-table__select"><input type="checkbox" data-tct-select-all aria-label="${escapeAttribute(i18n("TCT.Delete.SelectAll"))}"></th>`
+    : "";
+  const actionHeader = canEdit
+    ? `<th scope="col" class="tct-table__actions">${escapeHtml(i18n("TCT.Dialog.Actions"))}</th>`
+    : "";
+
+  const rows = report.rows.length
+    ? report.rows.map((row) => renderDialogRow(row, report.classes, preview.classMap, canEdit, draft)).join("")
+    : `<tr><td colspan="${canEdit ? 6 : 4}">${escapeHtml(i18n("TCT.Dialog.NoCantrips"))}</td></tr>`;
+
+  const bulkControls = canEdit && report.rows.length
+    ? `<div class="tct-dialog__bulk">
+        <span data-tct-selected-count>${escapeHtml(format("TCT.Delete.SelectedCount", { count: 0 }))}</span>
+        <button type="button" class="tct-bulk-delete" data-tct-bulk-delete disabled>
+          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+          ${escapeHtml(i18n("TCT.Delete.Selected"))}
+        </button>
+      </div>`
+    : "";
+
+  return `
+    <div class="tct-dialog">
+      <p class="tct-dialog__help">${escapeHtml(i18n("TCT.Dialog.Help"))}</p>
+      <div class="tct-dialog__summary">${classPills}${otherPill}${unassignedPill}</div>
+      <div class="tct-table-wrap">
+        <table class="tct-table">
+          <thead>
+            <tr>
+              ${selectionHeader}
+              <th scope="col">${escapeHtml(i18n("TCT.Dialog.Spell"))}</th>
+              <th scope="col">${escapeHtml(i18n("TCT.Dialog.Assignment"))}</th>
+              <th scope="col">${escapeHtml(i18n("TCT.Dialog.Source"))}</th>
+              <th scope="col">${escapeHtml(i18n("TCT.Dialog.Status"))}</th>
+              ${actionHeader}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      ${bulkControls}
+      <div class="tct-dialog__footer" data-tct-preview="total">${escapeHtml(format("TCT.Dialog.Total", { count: preview.total }))}</div>
+    </div>`;
+}
+
+function draftClassPill(entry) {
+  const maxText = entry.max ?? "?";
+  const text = format("TCT.Summary.ClassCount", {
+    class: entry.name,
+    count: entry.count,
+    max: maxText
+  });
+  return `<span class="tct-dialog__pill ${entry.over ? "is-over" : ""}" data-tct-class-id="${escapeAttribute(entry.id)}">${escapeHtml(entry.over ? `⚠ ${text}` : text)}</span>`;
+}
+
+function renderDialogRow(row, classes, classMap, canEdit, draft) {
+  const manual = draft.assignments.get(row.spell.id)
+    ?? row.spell.getFlag?.(MODULE_ID, ASSIGNMENT_FLAG)
+    ?? AUTO;
   const automatic = resolveAutomaticAssignment(classes, row.provenance);
   const automaticDestination = assignmentLabel(automatic, classes);
   const automaticLabel = format("TCT.Assignment.AutomaticResolved", { assignment: automaticDestination });
@@ -823,19 +889,215 @@ function renderDialogRow(row, classes, classMap, canEdit) {
     option(UNASSIGNED, i18n("TCT.Assignment.Unassigned"), manual)
   ].join("");
 
-  const status = statusForRow(row, classMap);
-  const assignedLabel = assignmentLabel(row, classes);
+  const assignment = resolveAssignmentValue(manual, classes, row.provenance);
+  const previewRow = { ...row, ...assignment };
+  const status = statusForRow(previewRow, classMap);
+  const assignedLabel = assignmentLabel(previewRow, classes);
   const assignmentControl = canEdit
-    ? `<select name="assignment-${escapeAttribute(row.spell.id)}" aria-label="${escapeAttribute(format("TCT.Accessibility.AssignmentFor", { spell: row.spell.name }))}">${options}</select>`
+    ? `<select name="assignment-${escapeAttribute(row.spell.id)}" data-tct-assignment data-spell-id="${escapeAttribute(row.spell.id)}" aria-label="${escapeAttribute(format("TCT.Accessibility.AssignmentFor", { spell: row.spell.name }))}">${options}</select>`
     : escapeHtml(assignedLabel);
 
+  const selectCell = canEdit
+    ? `<td class="tct-table__select"><input type="checkbox" data-tct-select data-spell-id="${escapeAttribute(row.spell.id)}" aria-label="${escapeAttribute(format("TCT.Delete.SelectSpell", { spell: row.spell.name }))}"></td>`
+    : "";
+  const actionCell = canEdit
+    ? `<td class="tct-table__actions">
+        <button type="button" class="tct-row-delete" data-tct-delete data-spell-id="${escapeAttribute(row.spell.id)}" aria-label="${escapeAttribute(format("TCT.Delete.MarkSpell", { spell: row.spell.name }))}" title="${escapeAttribute(i18n("TCT.Delete.Mark"))}">
+          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+        </button>
+      </td>`
+    : "";
+
   return `
-    <tr>
-      <td class="tct-table__spell"><strong>${escapeHtml(row.spell.name)}</strong></td>
+    <tr data-tct-row data-spell-id="${escapeAttribute(row.spell.id)}">
+      ${selectCell}
+      <td class="tct-table__spell"><strong>${escapeHtml(row.spell.name)}</strong><span class="tct-pending-delete-label" hidden>${escapeHtml(i18n("TCT.Status.PendingDelete"))}</span></td>
       <td class="tct-table__assignment">${assignmentControl}</td>
       <td class="tct-table__source">${escapeHtml(row.provenance.label)}</td>
-      <td class="tct-table__status"><span class="tct-status ${status.warning ? "is-warning" : ""}"><span aria-hidden="true">${status.icon}</span> ${escapeHtml(status.label)}</span></td>
+      <td class="tct-table__status"><span class="tct-status ${status.warning ? "is-warning" : ""}" data-tct-status><span aria-hidden="true">${status.icon}</span> ${escapeHtml(status.label)}</span></td>
+      ${actionCell}
     </tr>`;
+}
+
+function initializeDraftDialog(element, report, draft) {
+  const root = element.querySelector(".tct-dialog");
+  if (!root) return;
+
+  const refresh = () => updateDraftDialog(root, report, draft);
+
+  root.querySelectorAll("[data-tct-assignment]").forEach((select) => {
+    select.addEventListener("change", () => {
+      draft.assignments.set(select.dataset.spellId, select.value);
+      refresh();
+    });
+  });
+
+  root.querySelectorAll("[data-tct-delete]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.spellId;
+      if (draft.deleted.has(id)) draft.deleted.delete(id);
+      else draft.deleted.add(id);
+      refresh();
+    });
+  });
+
+  root.querySelector("[data-tct-bulk-delete]")?.addEventListener("click", () => {
+    root.querySelectorAll("[data-tct-select]:checked").forEach((checkbox) => {
+      draft.deleted.add(checkbox.dataset.spellId);
+      checkbox.checked = false;
+    });
+    refresh();
+  });
+
+  root.querySelector("[data-tct-select-all]")?.addEventListener("change", (event) => {
+    const checked = event.currentTarget.checked;
+    root.querySelectorAll("[data-tct-select]").forEach((checkbox) => {
+      if (!checkbox.disabled) checkbox.checked = checked;
+    });
+    updateDraftSelectionControls(root);
+  });
+
+  root.querySelectorAll("[data-tct-select]").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => updateDraftSelectionControls(root));
+  });
+
+  refresh();
+}
+
+function updateDraftDialog(root, report, draft) {
+  const preview = buildDraftPreview(report, draft);
+
+  for (const cls of preview.classes) {
+    const pill = root.querySelector(`[data-tct-class-id="${cssEscape(cls.id)}"]`);
+    if (!pill) continue;
+    const text = format("TCT.Summary.ClassCount", {
+      class: cls.name,
+      count: cls.count,
+      max: cls.max ?? "?"
+    });
+    pill.textContent = cls.over ? `⚠ ${text}` : text;
+    pill.classList.toggle("is-over", cls.over);
+  }
+
+  const otherPill = root.querySelector('[data-tct-preview="other"]');
+  if (otherPill) {
+    otherPill.hidden = preview.other === 0;
+    otherPill.textContent = format("TCT.Summary.Other", { count: preview.other });
+  }
+
+  const unassignedPill = root.querySelector('[data-tct-preview="unassigned"]');
+  if (unassignedPill) {
+    unassignedPill.hidden = preview.unassigned === 0;
+    unassignedPill.textContent = `⚠ ${format("TCT.Summary.ToAssign", { count: preview.unassigned })}`;
+  }
+
+  const total = root.querySelector('[data-tct-preview="total"]');
+  if (total) total.textContent = format("TCT.Dialog.Total", { count: preview.total });
+
+  for (const row of report.rows) {
+    const rowElement = root.querySelector(`[data-tct-row][data-spell-id="${cssEscape(row.spell.id)}"]`);
+    if (!rowElement) continue;
+
+    const deleted = draft.deleted.has(row.spell.id);
+    rowElement.classList.toggle("is-pending-delete", deleted);
+
+    const select = rowElement.querySelector("[data-tct-select]");
+    if (select) {
+      select.disabled = deleted;
+      if (deleted) select.checked = false;
+    }
+
+    const assignmentControl = rowElement.querySelector("[data-tct-assignment]");
+    if (assignmentControl) assignmentControl.disabled = deleted;
+
+    const pendingLabel = rowElement.querySelector(".tct-pending-delete-label");
+    if (pendingLabel) pendingLabel.hidden = !deleted;
+
+    const deleteButton = rowElement.querySelector("[data-tct-delete]");
+    if (deleteButton) {
+      deleteButton.classList.toggle("is-restore", deleted);
+      deleteButton.title = i18n(deleted ? "TCT.Delete.Restore" : "TCT.Delete.Mark");
+      deleteButton.setAttribute(
+        "aria-label",
+        format(deleted ? "TCT.Delete.RestoreSpell" : "TCT.Delete.MarkSpell", { spell: row.spell.name })
+      );
+      const icon = deleteButton.querySelector("i");
+      if (icon) icon.className = deleted ? "fa-solid fa-rotate-left" : "fa-solid fa-trash";
+    }
+
+    const statusNode = rowElement.querySelector("[data-tct-status]");
+    if (statusNode) {
+      if (deleted) {
+        statusNode.classList.remove("is-warning");
+        statusNode.innerHTML = `<span aria-hidden="true">🗑</span> ${escapeHtml(i18n("TCT.Status.PendingDelete"))}`;
+      } else {
+        const manual = draft.assignments.get(row.spell.id) ?? AUTO;
+        const assignment = resolveAssignmentValue(manual, report.classes, row.provenance);
+        const previewRow = { ...row, ...assignment };
+        const status = statusForRow(previewRow, preview.classMap);
+        statusNode.classList.toggle("is-warning", status.warning);
+        statusNode.innerHTML = `<span aria-hidden="true">${status.icon}</span> ${escapeHtml(status.label)}`;
+      }
+    }
+  }
+
+  updateDraftSelectionControls(root);
+}
+
+function updateDraftSelectionControls(root) {
+  const selected = Array.from(root.querySelectorAll("[data-tct-select]:checked")).length;
+  const counter = root.querySelector("[data-tct-selected-count]");
+  if (counter) counter.textContent = format("TCT.Delete.SelectedCount", { count: selected });
+
+  const bulkButton = root.querySelector("[data-tct-bulk-delete]");
+  if (bulkButton) bulkButton.disabled = selected === 0;
+
+  const selectAll = root.querySelector("[data-tct-select-all]");
+  if (selectAll) {
+    const enabled = Array.from(root.querySelectorAll("[data-tct-select]:not(:disabled)"));
+    const checked = enabled.filter((checkbox) => checkbox.checked).length;
+    selectAll.checked = enabled.length > 0 && checked === enabled.length;
+    selectAll.indeterminate = checked > 0 && checked < enabled.length;
+  }
+}
+
+function buildDraftPreview(report, draft) {
+  const classes = report.classes.map((entry) => ({
+    ...entry,
+    spells: [],
+    count: 0,
+    over: false
+  }));
+  const classMap = new Map(classes.map((entry) => [entry.id, entry]));
+  let other = 0;
+  let unassigned = 0;
+  let total = 0;
+
+  for (const row of report.rows) {
+    if (draft.deleted.has(row.spell.id)) continue;
+    total += 1;
+
+    const manual = draft.assignments.get(row.spell.id)
+      ?? row.spell.getFlag?.(MODULE_ID, ASSIGNMENT_FLAG)
+      ?? AUTO;
+    const assignment = resolveAssignmentValue(manual, classes, row.provenance);
+
+    if (assignment.kind === "class" && classMap.has(assignment.classId)) {
+      const cls = classMap.get(assignment.classId);
+      cls.spells.push(row.spell);
+      cls.count += 1;
+    } else if (assignment.kind === "other") {
+      other += 1;
+    } else {
+      unassigned += 1;
+    }
+  }
+
+  for (const cls of classes) {
+    cls.over = cls.max != null && cls.count > cls.max;
+  }
+
+  return { classes, classMap, other, unassigned, total };
 }
 
 function assignmentLabel(row, classes) {
