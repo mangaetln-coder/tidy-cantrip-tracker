@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.4
+
+- Correction de la réinjection des compteurs de sorts mineurs lorsque Tidy recrée ou remplace les encarts d'incantation.
+- Le compteur reste volontairement masqué lorsque l'encart de classe est réduit, via le comportement natif `hide-collapsed`.
+- Lors du retour à l'encart complet, **Sorts mineurs** est automatiquement réinjecté juste avant **Préparé**.
+- Ajout d'un `MutationObserver` ciblé sur les mutations pertinentes des encarts d'incantation Tidy, sans minuterie périodique.
+- L'observateur est temporairement déconnecté pendant les propres injections du module afin d'éviter les boucles de rendu.
+- L'encart **Autres** bénéficie du même mécanisme de restauration lorsqu'une reconstruction de l'interface Tidy le supprime.
+- Aucun changement dans le calcul des quotas, les attributions, la provenance, le multiclassage ou les données enregistrées sur le personnage.
+
+# Changelog
+
 ## 1.1.3
 
 - Le choix **Automatique** affiche désormais sa destination réelle, par exemple **Druid (Automatique)**, **Autres (Automatique)** ou **À attribuer (Automatique)**.
