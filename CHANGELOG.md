@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.3
+
+- Le choix **Automatique** affiche désormais sa destination réelle, par exemple **Druid (Automatique)**, **Autres (Automatique)** ou **À attribuer (Automatique)**.
+- Lorsqu'une attribution est forcée manuellement, le choix manuel reste affiché sans suffixe ; l'option Automatique continue de prévisualiser ce que ferait le module.
+- Ajout d'un indicateur **⚠** directement dans le compteur de classe lorsqu'un quota de sorts mineurs est dépassé, en complément du style d'erreur et de l'infobulle.
+- Correction défensive des Scale Values de sorts mineurs corrompues par l'ancien comportement de concaténation de D&D5e (par exemple `2 + 1` devenu `"21"`).
+- En cas de valeur préparée suspecte, reconstruction du maximum à partir du ScaleValue `cantrips-known` de la classe au niveau courant, puis application des effets additifs actifs ciblant le chemin actuel ou l'ancien chemin.
+- Aucun correctif n'est écrit dans les données du personnage : Tidy Cantrip Tracker corrige uniquement son calcul d'affichage.
+
 ## 1.1.2
 
 - Déplacement des compteurs de sorts mineurs dans les encarts d'incantation Tidy.
