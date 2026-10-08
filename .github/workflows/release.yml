@@ -1,0 +1,60 @@
+name: Publish Foundry release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read module version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(jq -r '.version' module.json)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Validate manifest release URLs
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          EXPECTED_DOWNLOAD="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/tidy-cantrip-tracker-v${VERSION}.zip"
+          ACTUAL_DOWNLOAD="$(jq -r '.download' module.json)"
+          if [[ "$ACTUAL_DOWNLOAD" != "$EXPECTED_DOWNLOAD" ]]; then
+            echo "::error::module.json download URL does not match version/tag."
+            echo "Expected: $EXPECTED_DOWNLOAD"
+            echo "Actual:   $ACTUAL_DOWNLOAD"
+            exit 1
+          fi
+
+      - name: Build Foundry package
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          zip -r "tidy-cantrip-tracker-v${VERSION}.zip"             module.json             scripts             styles             lang             README.md             CHANGELOG.md
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          ZIP="tidy-cantrip-tracker-v${VERSION}.zip"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" module.json "$ZIP" --clobber
+          else
+            gh release create "$TAG"               module.json "$ZIP"               --title "Tidy Cantrip Tracker ${VERSION}"               --notes-file CHANGELOG.md
+          fi
